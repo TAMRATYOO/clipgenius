@@ -1,14 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>ClipGenius</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClipGenius.AI</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 800px; margin: 32px auto; padding: 0 16px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .btn { padding: 10px 16px; border-radius: 10px; border: none; background: #2563eb; color: #fff; cursor: pointer; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    label { display: flex; align-items: center; gap: 8px; }
+    .muted { color: #6b7280; }
+    footer { margin-top: 24px; text-align: center; color: #6b7280; font-size: 14px; }
+    input[type=file] { max-width: 100%; }
+    textarea { width: 100%; min-height: 100px; }
+  </style>
 </head>
-<body style="font-family:sans-serif;text-align:center;">
-  <h1>🎬 ClipGenius</h1>
-  <p>Upload a video and let AI do the rest.</p>
-  <form action="/upload" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept="video/mp4" required>
-    <button type="submit">Process</button>
-  </form>
+<body>
+  <div class="card">
+    <h1>ClipGenius.AI</h1>
+    <p class="muted">Upload a video → transcribe (Whisper) → generate narration (ElevenLabs) → <b>merge into the video</b> → optional watermark.</p>
+    <form id="uploadForm">
+      <div class="row">
+        <input type="file" name="video" accept="video/*" required />
+      </div>
+      <div class="row">
+        <label><input type="checkbox" name="use_whisper" checked /> Whisper (captions)</label>
+        <label><input type="checkbox" name="use_elevenlabs" checked /> ElevenLabs narration</label>
+        <label><input type="checkbox" name="watermark" /> Add watermark</label>
+      </div>
+      <div class="row" style="width:100%">
+        <label class="muted">Optional custom narration text (leave empty to use Whisper transcript):</label>
+        <textarea name="custom_text" placeholder="Type narration text here..."></textarea>
+      </div>
+      <div class="row">
+        <button class="btn" type="submit">Process Video</button>
+      </div>
+    </form>
+    <p id="status" class="muted"></p>
+  </div>
+
+  <footer>
+    © 2025 ClipGenius.AI™ — All rights reserved
+  </footer>
+
+<script>
+const form = document.getElementById('uploadForm');
+const statusEl = document.getElementById('status');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  statusEl.textContent = 'Uploading and processing... this may take a moment.';
+  const fd = new FormData(form);
+  fd.set('use_whisper', form.use_whisper.checked ? 'true' : 'false');
+  fd.set('use_elevenlabs', form.use_elevenlabs.checked ? 'true' : 'false');
+  fd.set('watermark', form.watermark.checked ? 'true' : 'false');
+
+  try {
+    const res = await fetch('/process_video', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('Server error');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'clipgenius_processed.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    statusEl.textContent = '✅ Done — your processed video has downloaded.';
+  } catch (err) {
+    statusEl.textContent = '❌ Failed: ' + err.message;
+  }
+});
+</script>
 </body>
 </html>
